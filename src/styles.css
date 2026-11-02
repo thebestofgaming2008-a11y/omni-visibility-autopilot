@@ -174,3 +174,37 @@
   --color-site-import-border: var(--site-import-border);
 }
 /* site-import tokens: end */
+
+/* Workspace theme: calm light operator workspace (overrides unprefixed roles above) */
+@font-face { font-family: "DM Sans"; font-weight: 400 700; font-display: swap; src: url(/site-assets/713ca32c3c8b2ada.woff2) format("woff2"); }
+@font-face { font-family: "Space Grotesk"; font-weight: 500 700; font-display: swap; src: url(/site-assets/98a0d4ac28a1eb32.woff2) format("woff2"); }
+:root {
+  --background: oklch(0.975 0.006 95);
+  --foreground: oklch(0.26 0.02 250);
+  --card: oklch(0.995 0.003 95);
+  --card-foreground: oklch(0.26 0.02 250);
+  --primary: oklch(0.47 0.07 185);
+  --primary-foreground: oklch(0.985 0.005 185);
+  --secondary: oklch(0.945 0.012 95);
+  --secondary-foreground: oklch(0.3 0.02 250);
+  --muted: oklch(0.95 0.008 95);
+  --muted-foreground: oklch(0.52 0.02 250);
+  --accent: oklch(0.93 0.03 185);
+  --accent-foreground: oklch(0.32 0.06 185);
+  --border: oklch(0.9 0.01 95);
+  --input: oklch(0.9 0.01 95);
+  --ring: oklch(0.6 0.07 185);
+  --success: oklch(0.55 0.11 150);
+  --success-soft: oklch(0.94 0.04 150);
+  --warning: oklch(0.6 0.12 70);
+  --warning-soft: oklch(0.95 0.05 85);
+  --info-soft: oklch(0.94 0.025 240);
+}
+@theme inline {
+  --font-display: "Space Grotesk", sans-serif;
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-info-soft: var(--info-soft);
+}
