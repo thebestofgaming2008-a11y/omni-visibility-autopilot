@@ -1,7 +1,9 @@
-// Sample workspace data. Replace with real storage when a backend is connected.
+// Workspace data, saved in this browser only (localStorage). Swap for real storage later.
+import { useSyncExternalStore } from "react";
 
 export type Confidence = "high" | "medium" | "low";
 export type Source = "Search Console" | "GA4" | "Site check" | "Operator" | "Client brief";
+export const SOURCES: Source[] = ["Search Console", "GA4", "Site check", "Operator", "Client brief"];
 
 export interface Evidence {
   id: string;
@@ -13,6 +15,7 @@ export interface Evidence {
 }
 
 export interface PageMapRow {
+  id: string;
   query: string;
   intent: string;
   page: string;
@@ -43,10 +46,6 @@ export interface Client {
   industry: string;
   location: string;
   step: 1 | 2 | 3 | 4 | 5;
-  nextDecision: string;
-  gsc: "connected" | "not connected";
-  ga4: "connected" | "not connected" | "skipped";
-  lastCheck: string;
   profile: { offer: string; audience: string; goals: string[]; constraints: string[] };
   evidence: Evidence[];
   pageMap: PageMapRow[];
@@ -62,117 +61,74 @@ export const STEPS = [
   { n: 5, title: "Implement, verify, and report", short: "Report" },
 ] as const;
 
-export const clients: Client[] = [
-  {
-    id: "harbor-dental",
-    name: "Harbor Dental Studio",
-    site: "harbordental.example",
-    industry: "Dental clinic",
-    location: "Portland, OR",
-    step: 4,
-    nextDecision: "Approve 2 drafted recommendations before sharing with the client",
-    gsc: "connected",
-    ga4: "connected",
-    lastCheck: "Today, 08:10",
-    profile: {
-      offer: "General and cosmetic dentistry, emergency appointments",
-      audience: "Families and professionals within 10 miles",
-      goals: ["More emergency appointment searches", "Grow Invisalign enquiries"],
-      constraints: ["No medical claims without dentist review", "Site edits via their web agency"],
-    },
-    evidence: [
-      { id: "e1", claim: "\"emergency dentist portland\" has 4,200 impressions but 0.6% CTR", source: "Search Console", collected: "Last 28 days", confidence: "high", detail: "Average position 7.4. Title on /emergency does not mention same-day care." },
-      { id: "e2", claim: "Invisalign page has no indexed version", source: "Search Console", collected: "Today", confidence: "high", detail: "URL inspection: 'Crawled – currently not indexed'." },
-      { id: "e3", claim: "Organic sessions to /emergency fell 18% month over month", source: "GA4", collected: "Last 28 days", confidence: "medium", detail: "Seasonality not ruled out; only 14 months of history." },
-      { id: "e4", claim: "Homepage title is duplicated on 3 service pages", source: "Site check", collected: "Today", confidence: "high", detail: "Read-only crawl of 46 pages." },
-    ],
-    pageMap: [
-      { query: "emergency dentist portland", intent: "Urgent local", page: "/emergency", status: "weak", impressions: 4200 },
-      { query: "invisalign portland", intent: "Commercial", page: "/invisalign", status: "weak", impressions: 2100 },
-      { query: "teeth whitening cost", intent: "Research", page: "—", status: "missing", impressions: 1300 },
-      { query: "family dentist near me", intent: "Local", page: "/", status: "covered", impressions: 5800 },
-    ],
-    work: [
-      { id: "w1", title: "Rewrite /emergency title and intro for same-day care", why: "High impressions, low CTR on core urgent query.", evidenceIds: ["e1", "e3"], effort: "small", clientFacing: true, status: "draft", brief: "Title: 'Emergency Dentist in Portland — Same-Day Appointments'. Lead with hours and phone. Keep claims reviewed by Dr. Lee." },
-      { id: "w2", title: "Fix indexing on /invisalign", why: "Page not indexed; thin content suspected.", evidenceIds: ["e2"], effort: "medium", clientFacing: true, status: "draft", brief: "Expand to ~800 words: process, cost range, FAQs. Request reindex after publish." },
-      { id: "w3", title: "Unique titles for 3 service pages", why: "Duplicate titles dilute relevance.", evidenceIds: ["e4"], effort: "small", clientFacing: false, status: "approved" },
-    ],
-    history: [
-      { date: "Oct 30", text: "Search Console evidence refreshed automatically" },
-      { date: "Oct 28", text: "Page map updated: 4 queries mapped" },
-      { date: "Oct 21", text: "Business profile confirmed with client" },
-    ],
-  },
-  {
-    id: "northwind-bikes",
-    name: "Northwind Bikes",
-    site: "northwindbikes.example",
-    industry: "Bike shop & repairs",
-    location: "Denver, CO",
-    step: 2,
-    nextDecision: "Review 1 low-confidence finding before research",
-    gsc: "connected",
-    ga4: "skipped",
-    lastCheck: "Yesterday, 17:42",
-    profile: {
-      offer: "E-bike sales, servicing, rentals",
-      audience: "Commuters and weekend riders",
-      goals: ["Rank for e-bike repair", "Rental bookings in spring"],
-      constraints: ["Shopify site, limited template control"],
-    },
-    evidence: [
-      { id: "e1", claim: "Repair pages get 60% of organic clicks", source: "Search Console", collected: "Last 28 days", confidence: "high", detail: "312 of 520 clicks." },
-      { id: "e2", claim: "Rental page may be blocked by robots rules", source: "Site check", collected: "Yesterday", confidence: "low", detail: "Pattern match only; needs manual confirmation." },
-    ],
-    pageMap: [],
-    work: [],
-    history: [{ date: "Nov 1", text: "Search Console connected" }],
-  },
-  {
-    id: "lumen-law",
-    name: "Lumen Law Group",
-    site: "lumenlaw.example",
-    industry: "Employment law",
-    location: "Austin, TX",
-    step: 1,
-    nextDecision: "Confirm services and target areas with client",
-    gsc: "not connected",
-    ga4: "not connected",
-    lastCheck: "Not run yet",
-    profile: { offer: "Employment law for employees", audience: "", goals: [], constraints: ["Bar advertising rules apply"] },
-    evidence: [],
-    pageMap: [],
-    work: [],
-    history: [{ date: "Nov 2", text: "Client added" }],
-  },
-  {
-    id: "fernway-cafe",
-    name: "Fernway Café",
-    site: "fernway.example",
-    industry: "Café & bakery",
-    location: "Seattle, WA",
-    step: 5,
-    nextDecision: "Send October report after verifying menu page changes",
-    gsc: "connected",
-    ga4: "connected",
-    lastCheck: "Today, 07:55",
-    profile: { offer: "Coffee, pastries, catering", audience: "Locals and office catering", goals: ["Catering enquiries"], constraints: [] },
-    evidence: [
-      { id: "e1", claim: "Catering page impressions up 42% since rewrite", source: "Search Console", collected: "Last 28 days", confidence: "medium", detail: "Only 3 weeks post-change; early signal." },
-    ],
-    pageMap: [{ query: "catering seattle cafe", intent: "Commercial", page: "/catering", status: "covered", impressions: 900 }],
-    work: [
-      { id: "w1", title: "Rewrite catering page", why: "No page matched catering intent.", evidenceIds: ["e1"], effort: "medium", clientFacing: true, status: "done" },
-    ],
-    history: [{ date: "Oct 12", text: "Catering page change verified live" }],
-  },
-];
-
-export function getClient(id: string) {
-  return clients.find((c) => c.id === id);
-}
-
 /** Work that is client-facing must be approved by an operator before it can be implemented. */
 export function canImplement(item: WorkItem) {
   return item.status === "approved" || (!item.clientFacing && item.status !== "declined" && item.status !== "draft");
+}
+
+export function nextDecision(c: Client): string {
+  const drafts = c.work.filter((w) => w.status === "draft").length;
+  if (drafts) return `Approve or decline ${drafts} drafted item(s)`;
+  const low = c.evidence.filter((e) => e.confidence === "low").length;
+  switch (c.step) {
+    case 1: return c.profile.offer && c.profile.audience ? "Profile filled in — move on to evidence" : "Confirm offer, audience and goals";
+    case 2: return !c.evidence.length ? "Add the first findings" : low ? `Confirm ${low} low-confidence finding(s)` : "Move on to research";
+    case 3: return c.pageMap.length ? "Draft work from the page map" : "Map key searches to pages";
+    case 4: return c.work.length ? "Move approved work to implementation" : "Draft the first piece of work";
+    default: {
+      const open = c.work.filter((w) => canImplement(w) && w.status !== "done").length;
+      return open ? `Finish and verify ${open} approved item(s)` : "Review and send the report";
+    }
+  }
+}
+
+export const uid = () => Math.random().toString(36).slice(2, 10);
+export const nowLabel = () => new Date().toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+
+const KEY = "ova-clients-v1";
+const EMPTY: Client[] = [];
+let cache: Client[] | null = null;
+const listeners = new Set<() => void>();
+
+function read(): Client[] {
+  if (cache) return cache;
+  try { cache = JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { cache = []; }
+  return cache!;
+}
+
+export function saveClients(next: Client[]) {
+  cache = next;
+  localStorage.setItem(KEY, JSON.stringify(next));
+  listeners.forEach((l) => l());
+}
+
+export function useClients(): Client[] {
+  return useSyncExternalStore(
+    (l) => { listeners.add(l); return () => listeners.delete(l); },
+    read,
+    () => EMPTY,
+  );
+}
+
+export function addClient(c: Omit<Client, "id" | "step" | "evidence" | "pageMap" | "work" | "history" | "profile">) {
+  const client: Client = {
+    ...c, id: uid(), step: 1,
+    profile: { offer: "", audience: "", goals: [], constraints: [] },
+    evidence: [], pageMap: [], work: [],
+    history: [{ date: nowLabel(), text: "Client added" }],
+  };
+  saveClients([client, ...read()]);
+  return client;
+}
+
+export function updateClient(id: string, fn: (c: Client) => Client, logText?: string) {
+  saveClients(read().map((c) => {
+    if (c.id !== id) return c;
+    const n = fn(c);
+    return logText ? { ...n, history: [{ date: nowLabel(), text: logText }, ...n.history] } : n;
+  }));
+}
+
+export function deleteClient(id: string) {
+  saveClients(read().filter((c) => c.id !== id));
 }
