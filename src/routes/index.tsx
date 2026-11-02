@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import capturedCSS from "../styles/site.css?raw";
 
 export const Route = createFileRoute("/")({
@@ -8,6 +9,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
+  const [flow, setFlow] = useState<"signIn" | "signUp">("signIn");
   return (
     <>
       <style>{capturedCSS}</style>
@@ -19,14 +21,14 @@ function Index() {
             <h1>OmniVisibility Autopilot</h1>
             <p className="muted leading-normal">Your workspace for evidence based organic visibility.</p>
             <div className="auth-switch rounded-[10px] flex gap-[7px] mt-[26px] mr-0 mb-[20px] ml-0 p-[5px]">
-              <button className={"active flex-1 py-[10px] px-[14px] [&:disabled]:opacity-[0.55]"}>Sign in</button>
-              <button className={"flex-1 py-[10px] px-[14px] [&:disabled]:opacity-[0.55]"}>Create account</button>
+              <button type="button" onClick={() => setFlow("signIn")} className={(flow === "signIn" ? "active " : "") + "flex-1 py-[10px] px-[14px] [&:disabled]:opacity-[0.55]"}>Sign in</button>
+              <button type="button" onClick={() => setFlow("signUp")} className={(flow === "signUp" ? "active " : "") + "flex-1 py-[10px] px-[14px] [&:disabled]:opacity-[0.55]"}>Create account</button>
             </div>
-            <form className="grid gap-[16px]">
+            <form className="grid gap-[16px]" onSubmit={(e) => e.preventDefault()}>
               <label className="block">Email<input autoComplete="email" required type="email" name="email" /></label>
-              <label className="block">Password<input autoComplete="current-password" minLength={8} required type="password" name="password" /></label>
-              <input type="hidden" defaultValue="signIn" name="flow" />
-              <button className={"primary py-[10px] px-[14px] w-full [&:disabled]:opacity-[0.55]"}>Sign in</button>
+              <label className="block">Password<input autoComplete={flow === "signIn" ? "current-password" : "new-password"} minLength={8} required type="password" name="password" /></label>
+              <input type="hidden" value={flow} name="flow" />
+              <button className={"primary py-[10px] px-[14px] w-full [&:disabled]:opacity-[0.55]"}>{flow === "signIn" ? "Sign in" : "Create workspace"}</button>
             </form>
             <button className={"py-[10px] px-[14px] [&:disabled]:opacity-[0.55] [width:100%] mt-[12px]"}>Continue with Google</button>
             <p className="notice leading-normal pt-[18px] [border-top:1px_solid_rgb(52,65,90)]">Google sign in is available for approved development test accounts. Email verification and password reset are not configured yet.</p>
