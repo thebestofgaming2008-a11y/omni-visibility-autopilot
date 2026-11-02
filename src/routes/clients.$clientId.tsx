@@ -1,44 +1,40 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { useState, type ReactNode } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { type ReactNode } from "react";
 import { WorkspaceShell } from "@/components/workspace-shell";
-import { canImplement, getClient, STEPS, type Client, type Confidence, type WorkItem } from "@/lib/clients";
+import { canImplement, nextDecision, updateClient, useClients, STEPS, type Client, type Confidence, type WorkItem } from "@/lib/clients";
 
 export const Route = createFileRoute("/clients/$clientId")({
   validateSearch: (s: Record<string, unknown>): { step?: number } => {
-    const n = Number(s.step);
+    const n = Number(s["step"]);
     return n >= 1 && n <= 5 ? { step: n } : {};
   },
-  loader: ({ params }) => {
-    const client = getClient(params.clientId);
-    if (!client) throw notFound();
-    return { client };
-  },
-  head: ({ loaderData }) => {
-    const name = loaderData?.client.name ?? "Client";
-    return {
-      meta: [
-        { title: `${name} workflow — OmniVisibility Autopilot` },
-        { name: "description", content: `Five-step visibility workflow for ${name}: business, evidence, research, approval, and reporting.` },
-        { property: "og:title", content: `${name} workflow — OmniVisibility Autopilot` },
-        { property: "og:description", content: `Guided visibility workflow for ${name}.` },
-      ],
-    };
-  },
+  head: () => ({
+    meta: [
+      { title: "Client workflow — OmniVisibility Autopilot" },
+      { name: "description", content: "Five-step visibility workflow: business, evidence, research, approval, and reporting." },
+      { property: "og:title", content: "Client workflow — OmniVisibility Autopilot" },
+      { property: "og:description", content: "Guided five-step visibility workflow for a client." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: ClientWorkflow,
 });
 
 function ClientWorkflow() {
-  const { client } = Route.useLoaderData();
-  const { step = client.step } = Route.useSearch();
-  const [work, setWork] = useState<WorkItem[]>(client.work);
-  const [history, setHistory] = useState(client.history);
-  const log = (text: string) => setHistory((h) => [{ date: "Just now", text }, ...h]);
+  const { clientId } = Route.useParams();
+  const client = useClients().find((c) => c.id === clientId);
+  const search = Route.useSearch();
+  if (!client) return <WorkspaceShell><Link to="/" className="text-sm text-muted-foreground">← All clients</Link><p className="mt-6 text-muted-foreground">Client not found in this browser.</p></WorkspaceShell>;
+  const step = search.step ?? client.step;
+  const work = client.work;
+  const history = client.history;
   const setStatus = (id: string, status: WorkItem["status"]) => {
-    setWork((w) => w.map((i) => (i.id === id ? { ...i, status } : i)));
     const item = work.find((i) => i.id === id);
-    if (item) log(`${status === "approved" ? "Approved" : status === "declined" ? "Declined" : "Marked done"}: ${item.title}`);
+    updateClient(client.id, (c) => ({ ...c, work: c.work.map((i) => (i.id === id ? { ...i, status } : i)) }),
+      item ? `${status === "approved" ? "Approved" : status === "declined" ? "Declined" : "Marked done"}: ${item.title}` : undefined);
   };
-  const current = STEPS[step - 1];
+  const current = STEPS[step - 1] ?? STEPS[0];
 
   return (
     <WorkspaceShell>
@@ -46,9 +42,9 @@ function ClientWorkflow() {
       <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-semibold">{client.name}</h1>
-          <p className="text-muted-foreground">{client.site} · {client.industry} · {client.location}</p>
+          <p className="text-muted-foreground">{[client.site, client.industry, client.location].filter(Boolean).join(" · ")}</p>
         </div>
-        <p className="text-xs text-muted-foreground">Last automatic check: {client.lastCheck}</p>
+        {client.step < 5 && <button onClick={() => updateClient(client.id, (c) => ({ ...c, step: (c.step + 1) as Client["step"] }), `Moved to step ${client.step + 1}`)} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Complete step {client.step}</button>}
       </div>
 
       <nav className="mt-8 grid gap-2 sm:grid-cols-5">
@@ -80,12 +76,7 @@ function ClientWorkflow() {
         <aside className="grid content-start gap-4">
           <Card>
             <p className="text-xs font-semibold uppercase tracking-widest text-primary">Next decision</p>
-            <p className="mt-2 text-sm">{client.nextDecision}</p>
-          </Card>
-          <Card>
-            <p className="text-sm font-semibold">Data sources</p>
-            <SourceRow label="Search Console" note="Core" state={client.gsc} />
-            <SourceRow label="GA4" note="Optional, organic traffic only" state={client.ga4} />
+            <p className="mt-2 text-sm">{nextDecision(client)}</p>
           </Card>
           <Card>
             <p className="text-sm font-semibold">Work history</p>
@@ -176,7 +167,7 @@ function StepResearch({ client }: { client: Client }) {
           <thead className="text-xs text-muted-foreground"><tr>{["Search", "Intent", "Page", "Coverage", "Impressions"].map((h) => <th key={h} className="px-5 py-3 font-medium">{h}</th>)}</tr></thead>
           <tbody>
             {client.pageMap.map((r) => (
-              <tr key={r.query} className="border-t border-border">
+              <tr key={r.id} className="border-t border-border">
                 <td className="px-5 py-3 font-medium">{r.query}</td><td className="px-5 py-3">{r.intent}</td><td className="px-5 py-3">{r.page}</td>
                 <td className="px-5 py-3"><span className={`rounded-full px-2 py-0.5 text-xs ${tone[r.status]}`}>{r.status}</span></td>
                 <td className="px-5 py-3">{r.impressions.toLocaleString()}</td>
