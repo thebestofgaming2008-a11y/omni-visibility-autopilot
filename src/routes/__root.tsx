@@ -13,6 +13,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { downloadFile } from "../lib/download";
 
 function NotFoundComponent() {
   return (
@@ -38,6 +39,7 @@ function NotFoundComponent() {
 
 function ErrorComponent({ error, reset }: ErrorComponentProps) {
   console.error(error);
+  const errorMessage = error instanceof Error ? error.message : "";
   const router = useRouter();
   useEffect(() => {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
@@ -50,9 +52,24 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
           This page didn't load
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. You can try refreshing or head back home.
+          {errorMessage.startsWith("Saved client data")
+            ? errorMessage
+            : "The page could not load. Try again or return to your clients."}
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
+          {errorMessage.startsWith("Saved client data") && (
+            <button
+              onClick={() =>
+                downloadFile(
+                  "omni-client-backup.json",
+                  localStorage.getItem("ova-clients-v1") || "[]",
+                  "application/json",
+                )
+              }
+            >
+              Export original browser data
+            </button>
+          )}
           <button
             onClick={() => {
               router.invalidate();
@@ -79,11 +96,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "OmniVisibility" },
+      {
+        name: "description",
+        content: "Client visibility workbench: evidence, approved work, and verification.",
+      },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "OmniVisibility" },
+      {
+        property: "og:description",
+        content: "Client visibility workbench: evidence, approved work, and verification.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@Lovable" },
@@ -112,11 +135,15 @@ declare module "@tanstack/react-router" {
 }
 
 function RootShell({ children }: { children: ReactNode }) {
-  const importedDocument = useImportedMatches({ select: matches => matches.at(-1)?.staticData.importedDocument });
+  const importedDocument = useImportedMatches({
+    select: (matches) => matches.at(-1)?.staticData.importedDocument,
+  });
   return (
     <html lang="en" {...importedDocument?.html}>
       <head>
-        <style href="site-import-inline" precedence="imported-inline">{"@layer imported-inline;"}</style>
+        <style href="site-import-inline" precedence="imported-inline">
+          {"@layer imported-inline;"}
+        </style>
         <HeadContent />
       </head>
       <body {...importedDocument?.body}>

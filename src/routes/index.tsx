@@ -1,87 +1,174 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { ArrowRight, Plus, Users, Search } from "lucide-react";
 import { WorkspaceShell } from "@/components/workspace-shell";
-import { addClient, nextDecision, STEPS, useClients } from "@/lib/clients";
+import { addClient, nextDecision, STEPS, useClients, stageBlock } from "@/lib/clients";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "All clients — OmniVisibility Autopilot" },
-      { name: "description", content: "Every client's visibility workflow, current step, and next decision in one calm workspace." },
-      { property: "og:title", content: "All clients — OmniVisibility Autopilot" },
-      { property: "og:description", content: "Every client's visibility workflow, current step, and next decision." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      { title: "Clients — OmniVisibility" },
+      {
+        name: "description",
+        content: "Evidence, recommendations and verified work for every client.",
+      },
     ],
   }),
   component: Home,
 });
-
-const input = "w-full rounded-lg border border-input bg-background px-3 py-2 text-sm";
-
 function Home() {
   const clients = useClients();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [error, setError] = useState("");
   const [f, setF] = useState({ name: "", site: "", industry: "", location: "" });
-
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!f.name.trim()) return;
-    const c = addClient(f);
-    setF({ name: "", site: "", industry: "", location: "" });
-    navigate({ to: "/clients/$clientId", params: { clientId: c.id }, search: { step: 1 } });
-  };
-
+  const shown = clients
+    .filter((c) => `${c.name} ${c.site}`.toLowerCase().includes(query.toLowerCase()))
+    .sort(
+      (a, b) =>
+        Number(Boolean(stageBlock(b, b.step))) - Number(Boolean(stageBlock(a, a.step))) ||
+        (Date.parse(b.history[0]?.date || "") || 0) - (Date.parse(a.history[0]?.date || "") || 0),
+    );
   return (
     <WorkspaceShell>
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+      <div className="page-heading">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-primary">All clients</p>
-          <h1 className="mt-2 font-display text-3xl font-semibold">
-            {clients.length ? `${clients.length} client${clients.length > 1 ? "s" : ""} in your workspace` : "Add your first client"}
-          </h1>
-          <p className="mt-2 max-w-2xl text-muted-foreground">Nothing goes to a client or a live site until you approve it. Saved in this browser only.</p>
+          <p className="eyebrow">Your workspace</p>
+          <h1>Clients</h1>
+          <p>One clear next step for every business.</p>
         </div>
-        <button onClick={() => setOpen((o) => !o)} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90">
+        <button className="primary" onClick={() => setOpen(!open)}>
+          <Plus size={17} />
           {open ? "Cancel" : "Add client"}
         </button>
       </div>
-
       {open && (
-        <form onSubmit={submit} className="mb-6 grid gap-3 rounded-2xl border border-border bg-card p-5 sm:grid-cols-2">
-          <input required className={input} placeholder="Business name" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
-          <input className={input} placeholder="Website (e.g. example.com)" value={f.site} onChange={(e) => setF({ ...f, site: e.target.value })} />
-          <input className={input} placeholder="Industry" value={f.industry} onChange={(e) => setF({ ...f, industry: e.target.value })} />
-          <input className={input} placeholder="Location" value={f.location} onChange={(e) => setF({ ...f, location: e.target.value })} />
-          <button className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground sm:col-span-2">Create client</button>
+        <form
+          className="panel form-grid"
+          onSubmit={(e) => {
+            e.preventDefault();
+            try {
+              const c = addClient({ ...f, name: f.name.trim() });
+              navigate({
+                to: "/clients/$clientId",
+                params: { clientId: c.id },
+                search: { step: 1 },
+              });
+            } catch {
+              setError("Client could not be saved. Check browser storage and try again.");
+            }
+          }}
+        >
+          <div className="span-all">
+            <h2>New client</h2>
+            <p>Start with what you know. You can complete the profile later.</p>
+          </div>
+          {(
+            [
+              ["name", "Business name"],
+              ["site", "Website"],
+              ["industry", "Industry"],
+              ["location", "Location / service area"],
+            ] as const
+          ).map(([key, label]) => (
+            <label key={key}>
+              {label}
+              <input
+                autoFocus={key === "name"}
+                required={key === "name"}
+                value={f[key]}
+                onChange={(e) => setF({ ...f, [key]: e.target.value })}
+              />
+            </label>
+          ))}
+          <div className="span-all actions">
+            <button className="primary">
+              Create client <ArrowRight size={16} />
+            </button>
+            <span role="alert">{error}</span>
+          </div>
         </form>
       )}
-
-      <div className="grid gap-4">
-        {!clients.length && !open && (
-          <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">No clients yet. Click “Add client” to start.</div>
-        )}
-        {clients.map((c) => (
-          <Link key={c.id} to="/clients/$clientId" params={{ clientId: c.id }} search={{ step: c.step }}
-            className="group rounded-2xl border border-border bg-card p-6 transition hover:border-ring hover:shadow-sm">
-            <h2 className="font-display text-xl font-semibold">{c.name}</h2>
-            <p className="text-sm text-muted-foreground">{[c.site, c.industry, c.location].filter(Boolean).join(" · ")}</p>
-            <ol className="mt-5 grid grid-cols-5 gap-2">
-              {STEPS.map((s) => (
-                <li key={s.n}>
-                  <div className={`h-1.5 rounded-full ${s.n < c.step ? "bg-primary" : s.n === c.step ? "bg-primary/50" : "bg-muted"}`} />
-                  <p className={`mt-1.5 text-xs ${s.n === c.step ? "font-semibold text-foreground" : "text-muted-foreground"}`}>{s.short}</p>
-                </li>
-              ))}
-            </ol>
-            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-accent px-4 py-3">
-              <p className="text-sm text-accent-foreground"><span className="font-semibold">Next decision:</span> {nextDecision(c)}</p>
-              <span className="text-sm font-semibold text-primary group-hover:underline">Open workflow →</span>
+      <section className="panel client-list">
+        <div className="section-head">
+          <h2>
+            All clients <span className="count">{clients.length}</span>
+          </h2>
+          {clients.length > 0 && (
+            <label className="search">
+              <Search size={16} />
+              <input
+                aria-label="Search clients"
+                placeholder="Find a client…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </label>
+          )}
+        </div>
+        {!clients.length ? (
+          <div className="empty">
+            <span className="empty-icon">
+              <Users size={26} />
+            </span>
+            <h2>A workspace for your next client</h2>
+            <p>
+              Add a client to confirm business facts, gather evidence,
+              <br />
+              and track work through to verification.
+            </p>
+            <button className="primary" onClick={() => setOpen(true)}>
+              <Plus size={16} /> Add your first client
+            </button>
+            <small>No connections required to start.</small>
+          </div>
+        ) : (
+          <div className="client-table">
+            <div className="client-row table-labels">
+              <span>Client / website</span>
+              <span>Current stage</span>
+              <span>Next action</span>
+              <span>Last activity / sources</span>
             </div>
-          </Link>
-        ))}
-      </div>
+            {shown.map((c) => (
+              <div className="client-row" key={c.id}>
+                <div>
+                  <Link
+                    className="client-name"
+                    to="/clients/$clientId"
+                    params={{ clientId: c.id }}
+                    search={{ step: c.step }}
+                  >
+                    {c.name}
+                  </Link>
+                  <p className="wrap">{c.site || "Website not added"}</p>
+                </div>
+                <div>
+                  <span className="badge">{STEPS.find((s) => s.n === c.step)?.short}</span>
+                </div>
+                <Link
+                  className="next-link"
+                  to="/clients/$clientId"
+                  params={{ clientId: c.id }}
+                  search={{ step: c.step }}
+                >
+                  {nextDecision(c)}
+                  <ArrowRight size={16} />
+                </Link>
+                <div>
+                  <small>{c.history[0]?.date || "No activity recorded"}</small>
+                  <p>Sources not connected</p>
+                </div>
+              </div>
+            ))}
+            {!shown.length && <div className="empty">No clients match “{query}”.</div>}
+          </div>
+        )}
+      </section>
+      <p className="footnote">
+        Client data stays in this browser. Work and measured outcomes are tracked separately.
+      </p>
     </WorkspaceShell>
   );
 }
