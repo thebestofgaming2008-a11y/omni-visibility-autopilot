@@ -2,8 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import capturedCSS from "../styles/site.css?raw";
 
-export const Route = createFileRoute("/")({
-  head: () => ({ meta: [{ title: "OmniVisibility Autopilot — Development" }] }),
+export const Route = createFileRoute("/sign-in")({
+  head: () => ({ meta: [{ title: "Sign in — OmniVisibility Autopilot" }, { name: "description", content: "Operator sign in for OmniVisibility Autopilot." }, { property: "og:title", content: "Sign in — OmniVisibility Autopilot" }, { property: "og:description", content: "Operator sign in for OmniVisibility Autopilot." }] }),
   staticData: { importedDocument: { html: { "lang": "en" }, body: {  } } },
   component: Index,
 });
